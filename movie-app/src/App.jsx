@@ -179,8 +179,6 @@ function Movie({ movie }) {
 function MyMovieListContainer() {
   const [selectedMovies, setSelectedMovies] = useState(selected_movie_list);
   const [isOpen2, setIsOpen2] = useState(true);
-  const avgRating = getAverage(selected_movie_list.map((m) => m.rating));
-  const avgDuration = getAverage(selected_movie_list.map((m) => m.duration));
   return (
     <div className="movie-list">
       <button
@@ -195,55 +193,67 @@ function MyMovieListContainer() {
       </button>
       {isOpen2 && (
         <>
-          <div className="card mb-2">   
-            <div className="card-body">
-              <h5>Listeye {selectedMovies.length} film eklendi. </h5>
-              <div className="d-flex justify-content-between">
-                <p>
-                  <i className="bi bi-star-fill text-warning"></i>
-                  <span>{avgRating.toFixed(2)}</span>
-                </p>
-                <p>
-                  <i className="bi bi-hourglass text-warning"></i>
-                  <span>{avgDuration.toFixed(0)} min.</span>
-                </p>
-              </div>
-              {selectedMovies.map((movie) => (
-                <div className="card mb-2" key={movie.Id}>
-                  <div className="row">
-                    <div className="col-4">
-                      <img
-                        src={movie.Poster}
-                        alt={movie.Title}
-                        className="img-fluid rounded-start"
-                      />
-                    </div>
-                    <div className="col-8">
-                      <div className="card-body">
-                        <h6 className="card-title">{movie.Title}</h6>
-                        <div className="d-flex justify-content-between ">
-                          <p>
-                            <i className="bi bi-star-fill text-warning"></i>
-                            <span> {movie.rating} </span>
-                          </p>
-                          <p>
-                            <i className="bi bi-hourglass text-warning"></i>
-                            <span> {movie.duration} min. </span>
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <MyListSummary selectedMovies={selectedMovies} />
+          <MyMovieList selectedMovies={selectedMovies} />
         </>
       )}
     </div>
   );
 }
 
-function MyListSummary(){
-  
+function MyListSummary({ selectedMovies }) {
+  const avgRating = getAverage(selected_movie_list.map((m) => m.rating));
+  const avgDuration = getAverage(selected_movie_list.map((m) => m.duration));
+  <div className="card mb-2">
+    <div className="card-body">
+      <h5>Listeye {selectedMovies.length} film eklendi. </h5>
+      <div className="d-flex justify-content-between">
+        <p>
+          <i className="bi bi-star-fill text-warning"></i>
+          <span>{avgRating.toFixed(2)}</span>
+        </p>
+        <p>
+          <i className="bi bi-hourglass text-warning"></i>
+          <span>{avgDuration.toFixed(0)} min.</span>
+        </p>
+      </div>
+    </div>
+  </div>;
+}
+
+function MyMovieList({ selectedMovies }) {
+  return selectedMovies.map((movie) => (
+    <MyListMovie movie={movie} key={movie.Id} />
+  ));
+}
+
+function MyListMovie({ movie }) {
+  return (
+    <div className="card mb-2">
+      <div className="row">
+        <div className="col-4">
+          <img
+            src={movie.Poster}
+            alt={movie.Title}
+            className="img-fluid rounded-start"
+          />
+        </div>
+        <div className="col-8">
+          <div className="card-body">
+            <h6 className="card-title">{movie.Title}</h6>
+            <div className="d-flex justify-content-between ">
+              <p>
+                <i className="bi bi-star-fill text-warning"></i>
+                <span> {movie.rating} </span>
+              </p>
+              <p>
+                <i className="bi bi-hourglass text-warning"></i>
+                <span> {movie.duration} min. </span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
