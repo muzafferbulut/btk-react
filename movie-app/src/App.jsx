@@ -22,7 +22,6 @@ const movie_list = [
     Poster:
       "https://image.tmdb.org/t/p/original/ljsZTbVsrQSqZgWeep2B1QiDKuh.jpg",
   },
-  ,
   {
     Id: "105",
     Title: "Back to the Future",
@@ -66,32 +65,34 @@ const getAverage = (array) =>
   array.reduce((sum, value) => sum + value, 0) / array.length;
 
 export default function App() {
+  const [movies, setMovies] = useState(movie_list);
+
   return (
     <>
-      <Nav />
-      <Main />
+      <Nav movies={movies} />
+      <Main movies = {movies} />
     </>
   );
 }
 
-function Nav() {
+function Nav({movies}) {
   return (
     <nav className="bg-primary text-white p-2">
       <div className="container">
         <div className="row align-items-center">
           <Logo />
           <Search />
-          <NavSearchResult />
+          <NavSearchResult movies = {movies} />
         </div>
       </div>
     </nav>
   );
 }
 
-function NavSearchResult() {
+function NavSearchResult({movies}) {
   return (
     <div className="col-4 text-end">
-      <strong>5</strong> kayıt bulundu.
+      <strong>{movies.length}</strong> kayıt bulundu.
     </div>
   );
 }
@@ -113,12 +114,12 @@ function Search() {
   );
 }
 
-function Main() {
+function Main({movies}) {
   return (
     <main className="container">
       <div className="row mt-2">
         <div className="col-md-9">
-          <MovieListContainer />
+          <MovieListContainer movies={movies} />
         </div>
         <div className="col-md-3">
           <MyMovieListContainer />
@@ -128,7 +129,7 @@ function Main() {
   );
 }
 
-function MovieListContainer() {
+function MovieListContainer({movies}) {
   const [isOpen1, setIsOpen1] = useState(true);
   return (
     <div className="movie-list">
@@ -142,13 +143,12 @@ function MovieListContainer() {
           <i className="bi bi-chevron-down"></i>
         )}
       </button>
-      {isOpen1 && <MovieList />}
+      {isOpen1 && <MovieList movies={movies}/>}
     </div>
   );
 }
 
-function MovieList() {
-  const [movies, setMovies] = useState(movie_list);
+function MovieList({movies}) {
 
   return (
     <div className="row row-cols-1 row-cols-md-3 row-cols-xl-4 g-4">
