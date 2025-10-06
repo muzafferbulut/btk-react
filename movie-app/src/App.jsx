@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import get_key from "./key";
+import StarRating from "./StarRating";
 
 const getAverage = (array) =>
   array.reduce((sum, value) => sum + value / array.length, 0);
@@ -7,12 +8,23 @@ const getAverage = (array) =>
 const api_key = get_key();
 
 export default function App() {
-  const [query, setQuery] = useState("last");
+  const [query, setQuery] = useState("");
   const [movies, setMovies] = useState([]);
   const [selectedMovies, setSelectedMovies] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedMovie, setSelectedMovie] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [total_results, setTotalResults] = useState(0)
+
+  function nextPage() {
+    setCurrentPage(currentPage + 1);
+  }
+
+  function previousPage() {
+    setCurrentPage(currentPage - 1);
+  }
 
   function handleSelectedMovie(id) {
     setSelectedMovie((selectedMovie) => (id === selectedMovie ? null : id));
@@ -22,14 +34,29 @@ export default function App() {
     setSelectedMovie(null);
   }
 
+  function handleAddToList(movie) {
+    setSelectedMovies((selectedMovies) => [...selectedMovies, movie]);
+    handleUnselectMovice();
+  }
+
+  function handleDeleteFromList(id) {
+    setSelectedMovies((selectedMovies) =>
+      selectedMovies.filter((m) => m.id !== id)
+    );
+  }
+
   useEffect(
     function () {
-      async function getMovies() {
+      const controller = new AbortController();
+      const signal = controller.signal;
+
+      async function getMovies(page) {
         try {
           setLoading(true);
           setError("");
           const res = await fetch(
-            `https://api.themoviedb.org/3/search/movie?api_key=${api_key}&query=${query}`
+            `https://api.themoviedb.org/3/search/movie?api_key=${api_key}&query=${query}&page=${page}`,
+            { signal: signal }
           );
 
           if (!res.ok) {
@@ -42,8 +69,12 @@ export default function App() {
           }
 
           setMovies(data.results);
+          setTotalPages(data.total_pages);
+          setTotalResults(data.total_results)
         } catch (err) {
-          setError(err.message);
+          if (!err.name === "AbortError") {
+            setError(err.message);
+          }
         }
         setLoading(false);
       }
@@ -54,17 +85,18 @@ export default function App() {
         return;
       }
 
-      getMovies();
+      getMovies(currentPage);
+      return () => controller.abort();
     },
-    [query]
-  ); // useEffect tekrar çağırılsın diye buraya ilgili elementi yazdık.
+    [query, currentPage]
+  );
 
   return (
     <>
       <Nav>
         <Logo />
         <Search query={query} setQuery={setQuery} />
-        <NavSearchResults movies={movies} />
+        <NavSearchResults total_results={total_results} />
       </Nav>
       <Main>
         <div className="row mt-2">
@@ -72,31 +104,74 @@ export default function App() {
             <ListContainer>
               {loading && <Loading />}
               {!loading && !error && (
-                <MovieList
-                  movies={movies}
-                  onSelectMovie={handleSelectedMovie}
-                  selectedMovie={selectedMovie}
-                />
+                <>
+                  {movies.length > 0 && (
+                    <>
+                      <MovieList
+                        movies={movies}
+                        onSelectMovie={handleSelectedMovie}
+                        selectedMovie={selectedMovie}
+                      />
+                      <Pagination
+                        nextPage={nextPage}
+                        previousPage={previousPage}
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                      />
+                    </>
+                  )}
+                </>
               )}
               {error && <ErrorMessage message={error} />}
             </ListContainer>
           </div>
           <div className="col-md-3">
             <ListContainer>
-              <>
-                <MyListSummary selectedMovies={selectedMovies} />
-                <MyMovieList selectedMovies={selectedMovies} />
-                {selectedMovie && (
-                  <MovieDetails
-                    selectedMovie={selectedMovie}
-                    onUnselectMovie={handleUnselectMovice}
+              {selectedMovie ? (
+                <MovieDetails
+                  selectedMovie={selectedMovie}
+                  onUnselectMovie={handleUnselectMovice}
+                  onAddToList={handleAddToList}
+                  selectedMovies={selectedMovies}
+                />
+              ) : (
+                <>
+                  <MyListSummary selectedMovies={selectedMovies} />
+                  <MyMovieList
+                    selectedMovies={selectedMovies}
+                    onDeleteFromList={handleDeleteFromList}
                   />
-                )}
-              </>
+                </>
+              )}
             </ListContainer>
           </div>
         </div>
       </Main>
+    </>
+  );
+}
+
+function Pagination({ nextPage, previousPage, currentPage, totalPages }) {
+  return (
+    <>
+      <nav>
+        <ul className="pagination d-flex justify-content-between">
+          <li className={currentPage != 1 ? "page-item" : "page-item disabled"}>
+            <a href="#" className="page-link" onClick={previousPage}>
+              Geri
+            </a>
+          </li>
+          <li
+            className={
+              currentPage < totalPages ? "page-item" : "page-item disabled"
+            }
+          >
+            <a href="#" className="page-link" onClick={nextPage}>
+              İleri
+            </a>
+          </li>
+        </ul>
+      </nav>
     </>
   );
 }
@@ -146,10 +221,10 @@ function Search({ query, setQuery }) {
   );
 }
 
-function NavSearchResults({ movies }) {
+function NavSearchResults({ total_results }) {
   return (
     <div className="col-4 text-end">
-      <strong>{movies.length}</strong> kayıt bulundu.
+      <strong>{total_results}</strong> kayıt bulundu.
     </div>
   );
 }
@@ -192,8 +267,27 @@ function MovieList({ movies, onSelectMovie, selectedMovie }) {
   );
 }
 
-function MovieDetails({ selectedMovie, onUnselectMovie }) {
+function MovieDetails({
+  selectedMovie,
+  onUnselectMovie,
+  onAddToList,
+  selectedMovies,
+}) {
   const [movie, setMovie] = useState({});
+  const [userRating, setUserRating] = useState(null);
+  const isAddedToList = selectedMovies.map((m) => m.id).includes(selectedMovie);
+  const selectedMovieUserRating = selectedMovies.find(
+    (m) => m.id === selectedMovie
+  )?.userRating;
+
+  function handleAddToList() {
+    const newMovie = {
+      ...movie,
+      userRating,
+    };
+    onAddToList(newMovie);
+  }
+
   useEffect(
     function () {
       async function getMovieDetails() {
@@ -248,6 +342,26 @@ function MovieDetails({ selectedMovie, onUnselectMovie }) {
         </div>
       </div>
 
+      {!isAddedToList ? (
+        <>
+          <div className="my-4">
+            <StarRating maxRating={10} size={20} onRating={setUserRating} />
+          </div>
+          <button
+            className="btn btn-primary me-1"
+            onClick={() => handleAddToList(movie)}
+          >
+            Listeye Ekle
+          </button>
+        </>
+      ) : (
+        <p className="text-success">
+          Film listenizde. Puanınız :{" "}
+          <i className="bi bi-stars text-warning me-1"></i>{" "}
+          {selectedMovieUserRating}{" "}
+        </p>
+      )}
+
       <button className="btn btn-danger" onClick={onUnselectMovie}>
         Kapat
       </button>
@@ -287,8 +401,10 @@ function Movie({ movie, onSelectMovie, selectedMovie }) {
 }
 
 function MyListSummary({ selectedMovies }) {
-  const avgRating = getAverage(selectedMovies.map((m) => m.rating));
-  const avgDuration = getAverage(selectedMovies.map((m) => m.duration));
+  const avgRating = getAverage(selectedMovies.map((m) => m.vote_average));
+  const avgUserRating = getAverage(selectedMovies.map((m) => m.userRating));
+  const avgDuration = getAverage(selectedMovies.map((m) => m.runtime));
+
   return (
     <div className="card mb-2">
       <div className="card-body">
@@ -297,6 +413,10 @@ function MyListSummary({ selectedMovies }) {
           <p>
             <i className="bi bi-star-fill text-warning me-1"></i>
             <span>{avgRating.toFixed(2)}</span>
+          </p>
+          <p>
+            <i className="bi bi-stars text-warning me-1"></i>
+            <span>{avgUserRating.toFixed(2)}</span>
           </p>
           <p>
             <i className="bi bi-hourglass-split text-warning me-1"></i>
@@ -308,20 +428,29 @@ function MyListSummary({ selectedMovies }) {
   );
 }
 
-function MyMovieList({ selectedMovies }) {
+function MyMovieList({ selectedMovies, onDeleteFromList }) {
   return selectedMovies.map((movie) => (
-    <MyListMovie movie={movie} key={movie.Id} />
+    <MyListMovie
+      movie={movie}
+      key={movie.id}
+      onDeleteFromList={onDeleteFromList}
+    />
   ));
 }
 
-function MyListMovie({ movie }) {
+function MyListMovie({ movie, onDeleteFromList }) {
   return (
     <div className="card mb-2">
       <div className="row">
         <div className="col-4">
           <img
-            src={movie.Poster}
-            alt={movie.Title}
+            src={
+              movie.poster_path
+                ? `https://media.themoviedb.org/t/p/w440_and_h660_face` +
+                  movie.poster_path
+                : "/img/no-image.jpg"
+            }
+            alt={movie.title}
             className="img-fluid rounded-start"
           />
         </div>
@@ -331,13 +460,19 @@ function MyListMovie({ movie }) {
             <div className="d-flex justify-content-between">
               <p>
                 <i className="bi bi-star-fill text-warning me-1"></i>
-                <span>{movie.rating}</span>
+                <span>{movie.vote_average}</span>
               </p>
               <p>
                 <i className="bi bi-hourglass text-warning me-1"></i>
-                <span>{movie.duration} dk</span>
+                <span>{movie.runtime} dk</span>
               </p>
             </div>
+            <button
+              className="btn btn-danger"
+              onClick={() => onDeleteFromList(movie.id)}
+            >
+              Sil
+            </button>
           </div>
         </div>
       </div>
