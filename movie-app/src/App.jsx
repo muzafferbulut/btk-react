@@ -5,46 +5,65 @@ const getAverage = (array) =>
   array.reduce((sum, value) => sum + value / array.length, 0);
 
 const api_key = get_key();
-const query = "last";
 
 export default function App() {
+  const [query, setQuery] = useState("last");
   const [movies, setMovies] = useState([]);
   const [selectedMovies, setSelectedMovies] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [selectedMovie, setSelectedMovie] = useState(null);
 
-  useEffect(function () {
-    async function getMovies() {
-      try {
-        setLoading(true);
-        setError("");
-        const res = await fetch(
-          `https://api.themoviedb.org/3/search/movie?api_key=${api_key}&query=${query}`
-        );
+  function handleSelectedMovie(id) {
+    setSelectedMovie((selectedMovie) => (id === selectedMovie ? null : id));
+  }
 
-        if (!res.ok) {
-          throw new Error("Bilinmeyen hata oluştu.");
+  function handleUnselectMovice() {
+    setSelectedMovie(null);
+  }
+
+  useEffect(
+    function () {
+      async function getMovies() {
+        try {
+          setLoading(true);
+          setError("");
+          const res = await fetch(
+            `https://api.themoviedb.org/3/search/movie?api_key=${api_key}&query=${query}`
+          );
+
+          if (!res.ok) {
+            throw new Error("Bilinmeyen hata oluştu.");
+          }
+
+          const data = await res.json();
+          if (data.total_results === 0) {
+            throw new Error("Film bulunamadı.");
+          }
+
+          setMovies(data.results);
+        } catch (err) {
+          setError(err.message);
         }
-
-        const data = await res.json();
-        if (data.total_results === 0) {
-          throw new Error("Film bulunamadı.");
-        }
-
-        setMovies(data.results);
-      } catch (err) {
-        setError(err.message);
+        setLoading(false);
       }
-      setLoading(false);
-    }
-    getMovies();
-  }, []);
+
+      if (query.length < 3) {
+        setMovies([]);
+        setError("");
+        return;
+      }
+
+      getMovies();
+    },
+    [query]
+  ); // useEffect tekrar çağırılsın diye buraya ilgili elementi yazdık.
 
   return (
     <>
       <Nav>
         <Logo />
-        <Search />
+        <Search query={query} setQuery={setQuery} />
         <NavSearchResults movies={movies} />
       </Nav>
       <Main>
@@ -52,7 +71,13 @@ export default function App() {
           <div className="col-md-9">
             <ListContainer>
               {loading && <Loading />}
-              {!loading && !error && <MovieList movies={movies} />}
+              {!loading && !error && (
+                <MovieList
+                  movies={movies}
+                  onSelectMovie={handleSelectedMovie}
+                  selectedMovie={selectedMovie}
+                />
+              )}
               {error && <ErrorMessage message={error} />}
             </ListContainer>
           </div>
@@ -61,6 +86,12 @@ export default function App() {
               <>
                 <MyListSummary selectedMovies={selectedMovies} />
                 <MyMovieList selectedMovies={selectedMovies} />
+                {selectedMovie && (
+                  <MovieDetails
+                    selectedMovie={selectedMovie}
+                    onUnselectMovie={handleUnselectMovice}
+                  />
+                )}
               </>
             </ListContainer>
           </div>
@@ -101,10 +132,16 @@ function Logo() {
   );
 }
 
-function Search() {
+function Search({ query, setQuery }) {
   return (
     <div className="col-4">
-      <input type="text" className="form-control" placeholder="Film ara..." />
+      <input
+        type="text"
+        className="form-control"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Film ara..."
+      />
     </div>
   );
 }
@@ -140,20 +177,93 @@ function ListContainer({ children }) {
   );
 }
 
-function MovieList({ movies }) {
+function MovieList({ movies, onSelectMovie, selectedMovie }) {
   return (
     <div className="row row-cols-1 row-cols-md-3 row-cols-xl-4 g-4">
       {movies.map((movie) => (
-        <Movie movie={movie} key={movie.id} />
+        <Movie
+          movie={movie}
+          key={movie.id}
+          onSelectMovie={onSelectMovie}
+          selectedMovie={selectedMovie}
+        />
       ))}
     </div>
   );
 }
 
-function Movie({ movie }) {
+function MovieDetails({ selectedMovie, onUnselectMovie }) {
+  const [movie, setMovie] = useState({});
+  useEffect(
+    function () {
+      async function getMovieDetails() {
+        const res = await fetch(
+          `https://api.themoviedb.org/3/movie/${selectedMovie}?api_key=${api_key}`
+        );
+        const data = await res.json();
+        setMovie(data);
+      }
+
+      getMovieDetails();
+    },
+    [selectedMovie]
+  );
+
+  return (
+    <div className="border p-2 mb-3">
+      <div className="row">
+        <div className="col-4">
+          <img
+            src={
+              movie.poster_path
+                ? `https://media.themoviedb.org/t/p/w440_and_h660_face` +
+                  movie.poster_path
+                : "/img/no-image.jpg"
+            }
+            alt={movie.title}
+            className="img-fluid rounded"
+          />
+        </div>
+        <div className="col-8">
+          <h6>{movie.title}</h6>
+          <p>
+            <i className="bi bi-calendar2-date me-1"></i>
+            <span>{movie.release_date}</span>
+          </p>
+          <p>
+            <i className="bi bi-star fill text-warning"></i>
+            <span>{movie.vote_average}</span>
+          </p>
+        </div>
+
+        <div className="col-12 border-top p-3 mt-3">
+          <p>{movie.overview}</p>
+          <p>
+            {movie.genres?.map((genre) => (
+              <span key={genre.id} className="badge text-bg-primary me-1">
+                {genre.name}
+              </span>
+            ))}
+          </p>
+        </div>
+      </div>
+
+      <button className="btn btn-danger" onClick={onUnselectMovie}>
+        Kapat
+      </button>
+    </div>
+  );
+}
+
+function Movie({ movie, onSelectMovie, selectedMovie }) {
   return (
     <div className="col mb-2">
-      <div className="card">
+      <div
+        className={`card movie ${
+          selectedMovie === movie.id ? "selected-movie" : ""
+        }`}
+        onClick={() => onSelectMovie(movie.id)}
+      >
         <img
           src={
             movie.poster_path
@@ -182,7 +292,7 @@ function MyListSummary({ selectedMovies }) {
   return (
     <div className="card mb-2">
       <div className="card-body">
-        <h5>Listeye [{selectedMovies.length}] film eklendi.</h5>
+        <h5>Listeye {selectedMovies.length} film eklendi.</h5>
         <div className="d-flex justify-content-between">
           <p>
             <i className="bi bi-star-fill text-warning me-1"></i>
