@@ -1,16 +1,27 @@
-import { useReducer, useRef, useState } from "react";
+import { useState } from "react";
 
 export default function Login() {
-  const email = useRef();
-  const password = useRef();
+  // const [newEmail, setEmail] = useState("");
+  // const [newPassword, setPassword] = useState("");
+
+  const initialValues = { email: "", password: "" };
+
+  const [values, setValues] = useState(initialValues);
 
   function handleSubmit(e) {
     e.preventDefault();
-    console.log(email.current.value);
-    console.log(password.current.value);
+    console.log(values);
+    setValues(initialValues);
+  }
 
-    email.current.value = ""
-    password.current.value = ""
+  function handleInputChange(e) {
+    const name = e.target.name;
+    const value = e.target.value;
+
+    setValues({
+      ...values,
+      [name]: value,
+    });
   }
 
   return (
@@ -29,7 +40,8 @@ export default function Login() {
           className="form-control"
           id="email"
           name="email"
-          ref={email}
+          value={values.email}
+          onChange={handleInputChange}
         />
       </div>
       <div className="mb-4">
@@ -41,7 +53,8 @@ export default function Login() {
           className="form-control"
           id="password"
           name="password"
-          ref={password}
+          value={values.password}
+          onChange={handleInputChange}
         />
       </div>
       <div className="mb-3">
