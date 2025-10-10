@@ -1,4 +1,8 @@
+import { useState } from "react";
+
 export default function Register() {
+  const [passwordNotEqual, setPasswordNotEqual] = useState(false);
+
   function handleSubmit(e) {
     e.preventDefault();
 
@@ -11,10 +15,16 @@ export default function Register() {
     console.log(formData.getAll("hobbies"));
 
     const hobbies = formData.getAll("hobbies");
-
     const data = Object.fromEntries(formData.entries());
     data.hobbies = hobbies;
+
+    if (data.password !== data.repassword) {
+      setPasswordNotEqual(true);
+      return;
+    }
+
     console.log(data);
+    setPasswordNotEqual(false);
 
     e.target.reset();
   }
@@ -23,7 +33,7 @@ export default function Register() {
     <form onSubmit={handleSubmit}>
       <div className="header">
         <h1>Register</h1>
-        <p>Please enter your info.</p>
+        <p>Please enter your info!</p>
       </div>
 
       <div className="mb-3">
@@ -35,6 +45,7 @@ export default function Register() {
           className="form-control"
           id="fullname"
           name="fullname"
+          required
         />
       </div>
 
@@ -42,35 +53,44 @@ export default function Register() {
         <label htmlFor="email" className="form-label">
           Email
         </label>
-        <input type="email" className="form-control" id="email" name="email" />
+        <input
+          type="email"
+          className="form-control"
+          id="email"
+          name="email"
+          required
+        />
       </div>
 
       <div className="row mb-3">
         <div className="col-6">
-          <div className="mb-4">
-            <label htmlFor="password" className="form-label">
-              Password
-            </label>
-            <input
-              type="password"
-              className="form-control"
-              id="password"
-              name="password"
-            />
-          </div>
+          <label htmlFor="password" className="form-label">
+            Password
+          </label>
+          <input
+            type="password"
+            className="form-control"
+            id="password"
+            name="password"
+            required
+            minLength={5}
+            maxLength={10}
+          />
         </div>
         <div className="col-6">
-          <div className="mb-4">
-            <label htmlFor="repassword" className="form-label">
-              Repassword
-            </label>
-            <input
-              type="password"
-              className="form-control"
-              id="repassword"
-              name="repassword"
-            />
-          </div>
+          <label htmlFor="repassword" className="form-label">
+            Re-Password
+          </label>
+          <input
+            type="password"
+            className="form-control"
+            id="repassword"
+            name="repassword"
+            required
+          />
+          {passwordNotEqual && (
+            <div className="invalid-feedback d-block">Parola eşleşmiyor.</div>
+          )}
         </div>
       </div>
 
@@ -88,7 +108,7 @@ export default function Register() {
               value="cars"
             />
             <label htmlFor="cars" className="form-check-label">
-              Cars
+              Araba
             </label>
           </div>
           <div className="form-check">
@@ -100,7 +120,7 @@ export default function Register() {
               value="books"
             />
             <label htmlFor="books" className="form-check-label">
-              Books
+              Kitap
             </label>
           </div>
           <div className="form-check">
@@ -112,7 +132,7 @@ export default function Register() {
               value="movies"
             />
             <label htmlFor="movies" className="form-check-label">
-              Cinema
+              Sinema
             </label>
           </div>
         </div>
@@ -120,7 +140,9 @@ export default function Register() {
 
       <div className="mb-3">
         <button className="btn btn-outline-warning me-2">Submit</button>
-        <button className="btn btn-outline-light" type="reset">Reset</button>
+        <button type="reset" className="btn btn-outline-light">
+          Reset
+        </button>
       </div>
     </form>
   );

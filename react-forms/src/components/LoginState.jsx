@@ -1,62 +1,61 @@
-import { useState } from "react";
+import Input from "./Input";
+import useInput from "../hooks/useInput";
+import { isEmail, hasMinLength, isNotEmpty } from "../utils/validations";
 
 export default function Login() {
-  // const [newEmail, setEmail] = useState("");
-  // const [newPassword, setPassword] = useState("");
+  const {
+    value: emailValue,
+    handleInputChange: handleEmailChange,
+    handleInputBlur: handleEmailBlur,
+    hasError: emailHasError,
+  } = useInput("", (value) => isEmail(value) && isNotEmpty(value));
 
-  const initialValues = { email: "", password: "" };
-
-  const [values, setValues] = useState(initialValues);
+  const {
+    value: passwordValue,
+    handleInputChange: handlePasswordChange,
+    handleInputBlur: handlePasswordBlur,
+    hasError: passwordHasError,
+  } = useInput("", (value) => hasMinLength(value, 5));
 
   function handleSubmit(e) {
     e.preventDefault();
-    console.log(values);
-    setValues(initialValues);
-  }
 
-  function handleInputChange(e) {
-    const name = e.target.name;
-    const value = e.target.value;
+    if (emailHasError || passwordHasError) {
+      return;
+    }
 
-    setValues({
-      ...values,
-      [name]: value,
-    });
+    console.log(emailValue, passwordValue);
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} noValidate>
       <div className="header">
         <h1>Login</h1>
         <p>Please enter your login and password!</p>
       </div>
 
-      <div className="mb-3">
-        <label htmlFor="email" className="form-label">
-          Email
-        </label>
-        <input
-          type="email"
-          className="form-control"
-          id="email"
-          name="email"
-          value={values.email}
-          onChange={handleInputChange}
-        />
-      </div>
-      <div className="mb-4">
-        <label htmlFor="password" className="form-label">
-          Password
-        </label>
-        <input
-          type="password"
-          className="form-control"
-          id="password"
-          name="password"
-          value={values.password}
-          onChange={handleInputChange}
-        />
-      </div>
+      <Input
+        type="email"
+        name="email"
+        id="email"
+        labelText="Email"
+        error={emailHasError && "Enter valid email"}
+        value={emailValue}
+        onBlur={handleEmailBlur}
+        onChange={handleEmailChange}
+      />
+
+      <Input
+        type="password"
+        name="password"
+        id="password"
+        labelText="Password"
+        error={passwordHasError && "Parola min. 5 karakter olmalıdır."}
+        value={passwordValue}
+        onBlur={handlePasswordBlur}
+        onChange={handlePasswordChange}
+      />
+
       <div className="mb-3">
         <button className="btn btn-outline-warning me-2">Submit</button>
         <button className="btn btn-outline-light">Reset</button>
